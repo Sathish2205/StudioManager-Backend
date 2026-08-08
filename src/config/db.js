@@ -5,27 +5,44 @@ const { mongoUri, isDev } = require('./env')
 
 const connectDB = async () => {
   try {
+    console.log('🔄 Connecting to MongoDB database…')
     const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     })
 
     console.log(`✅  MongoDB connected: ${conn.connection.host} — DB: ${conn.connection.name}`)
-
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected')
-    })
-
-    mongoose.connection.on('error', (err) => {
-      console.error('❌  MongoDB error:', err.message)
-    })
-
-    if (isDev) {
-      mongoose.set('debug', false) // set true to log queries in dev
+  } catch (primaryErr) {
+    console.warn(`⚠️  Primary MongoDB connection failed: ${primaryErr.message}`)
+    
+    // Local fallback if Atlas fails (e.g. IP whitelist / network issue)
+    const localUri = 'mongodb://127.0.0.1:27017/photostudiopro'
+    console.log(`🔄 Attempting fallback connection to local MongoDB (${localUri})…`)
+    
+    try {
+      const conn = await mongoose.connect(localUri, {
+        serverSelectionTimeoutMS: 5000,
+      })
+      console.log(`✅  MongoDB Local Fallback connected: ${conn.connection.host} — DB: ${conn.connection.name}`)
+    } catch (fallbackErr) {
+      console.error(`❌  MongoDB connection failed completely:`)
+      console.error(`   Primary: ${primaryErr.message}`)
+      console.error(`   Fallback: ${fallbackErr.message}`)
+      console.error(`👉 Note: If using MongoDB Atlas, make sure your IP is whitelisted at https://cloud.mongodb.com`)
+      process.exit(1)
     }
-  } catch (err) {
-    console.error(`❌  MongoDB connection failed: ${err.message}`)
-    process.exit(1)
+  }
+
+  mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️  MongoDB disconnected')
+  })
+
+  mongoose.connection.on('error', (err) => {
+    console.error('❌  MongoDB error:', err.message)
+  })
+
+  if (isDev) {
+    mongoose.set('debug', false)
   }
 }
 
