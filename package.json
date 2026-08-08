@@ -1,0 +1,43 @@
+{
+  "name": "photostudiopro-backend",
+  "version": "1.0.0",
+  "description": "PhotoStudio Pro - Wedding Photography Studio Management Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed.js",
+    "test": "jest --testEnvironment=node --forceExit --detectOpenHandles"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.3",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
+  },
+  "keywords": [
+    "photography",
+    "studio",
+    "management",
+    "wedding",
+    "express",
+    "mongodb"
+  ],
+  "author": "PhotoStudio Pro Team",
+  "license": "ISC"
+}
