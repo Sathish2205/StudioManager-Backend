@@ -3,10 +3,14 @@
 const mongoose = require('mongoose')
 
 const WORKFLOW_STAGES = [
-  'Inquiry', 'Booking', 'Pre-Wedding', 'Photography',
-  'Editing', 'Review', 'Album Design', 'Printing', 'Delivery', 'Completed',
+  'Booking', 'Advance Payment', 'Event Assigned', 'Event Completed',
+  'Photo Backup', 'Photo Selection', 'Photo Editing', 'Client Review',
+  'Revision (Optional)', 'Final Approval', 'Album Design', 'Album Approval',
+  'Album Printing', 'Frame Printing (Optional)', 'Video Editing',
+  'Video Rendering', 'Deliverables Ready', 'Balance Payment', 'Delivered', 'Completed',
 ]
 const WORKFLOW_STATUSES = ['Pending', 'In Progress', 'Completed', 'On Hold']
+const OVERALL_STATUSES = ['Booking', 'Editing', 'Delivered', 'Completed']
 
 const workflowSchema = new mongoose.Schema(
   {
@@ -25,9 +29,25 @@ const workflowSchema = new mongoose.Schema(
       enum: { values: WORKFLOW_STATUSES, message: '{VALUE} is not a valid status' },
       default: 'Pending',
     },
+    overallStatus: {
+      type: String,
+      enum: { values: OVERALL_STATUSES, message: '{VALUE} is not a valid overall status' },
+      default: 'Booking',
+    },
+    currentStageIndex: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 19,
+    },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Employee',
+      default: null,
+    },
+    assignedEditor: {
+      type: String,
+      trim: true,
       default: null,
     },
     startDate: { type: Date, default: null },

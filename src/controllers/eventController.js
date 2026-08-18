@@ -46,28 +46,15 @@ const createEvent = async (req, res, next) => {
       createdBy: req.user._id,
     })
 
-    // Auto-generate workflow pipeline for the event
-    const STAGES = [
-      { stage: 'Inquiry', order: 0, status: 'Completed' },
-      { stage: 'Booking', order: 1, status: 'In Progress' },
-      { stage: 'Pre-Wedding', order: 2 },
-      { stage: 'Photography', order: 3 },
-      { stage: 'Editing', order: 4 },
-      { stage: 'Review', order: 5 },
-      { stage: 'Album Design', order: 6 },
-      { stage: 'Printing', order: 7 },
-      { stage: 'Delivery', order: 8 },
-      { stage: 'Completed', order: 9 },
-    ]
-
-    await Workflow.insertMany(
-      STAGES.map(s => ({
-        eventId: event._id,
-        stage: s.stage,
-        status: s.status || 'Pending',
-        order: s.order,
-      }))
-    )
+    // Auto-generate workflow document for the event
+    await Workflow.create({
+      eventId: event._id,
+      stage: 'Booking',
+      status: 'In Progress',
+      overallStatus: 'Booking',
+      currentStageIndex: 0,
+      order: 0,
+    })
 
     // Update client status to active
     if (client.status === 'lead') {
