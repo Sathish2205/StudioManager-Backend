@@ -3,7 +3,25 @@
 const mongoose = require('mongoose')
 
 const TASK_PRIORITIES = ['Low', 'Medium', 'High', 'Urgent']
-const TASK_STATUSES = ['Todo', 'In Progress', 'Completed', 'Cancelled']
+const TASK_STATUSES = [
+  'To Do',
+  'Culling',
+  'Editing & Album Design',
+  'Quality Check',
+  'Final Approval',
+  'Production',
+  'Ready for Delivery',
+  'Delivered',
+  'Todo',
+  'In Progress',
+  'Completed',
+  'Cancelled',
+  'New',
+  'Shoot Completed',
+  'Editing Completed',
+  'Review',
+  'On Hold'
+]
 
 const taskSchema = new mongoose.Schema(
   {
@@ -14,6 +32,12 @@ const taskSchema = new mongoose.Schema(
       maxlength: [200, 'Title cannot exceed 200 characters'],
     },
     description: { type: String, trim: true, default: null },
+    eventName: { type: String, trim: true, default: null },
+    clientName: { type: String, trim: true, default: null },
+    deliverableType: { type: String, trim: true, default: 'Edited Photos' },
+    assignedEditor: { type: String, trim: true, default: 'Deepa (Lead Editor)' },
+    progress: { type: Number, default: 0 },
+    notes: { type: String, trim: true, default: null },
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
@@ -26,20 +50,18 @@ const taskSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: { values: TASK_PRIORITIES, message: '{VALUE} is not a valid priority' },
       default: 'Medium',
     },
     status: {
       type: String,
-      enum: { values: TASK_STATUSES, message: '{VALUE} is not a valid status' },
-      default: 'Todo',
+      default: 'To Do',
     },
     dueDate: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }

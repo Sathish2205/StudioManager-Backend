@@ -7,7 +7,8 @@ const { parsePagination, buildFilter, buildPaginationMeta } = require('../utils/
 // POST /api/tasks
 const createTask = async (req, res, next) => {
   try {
-    const task = await Task.create({ ...req.body, createdBy: req.user._id })
+    const createdBy = req.user ? req.user._id : undefined
+    const task = await Task.create({ ...req.body, ...(createdBy ? { createdBy } : {}) })
 
     const populated = await Task.findById(task._id)
       .populate('assignedTo', 'name role avatar')
