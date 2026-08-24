@@ -160,6 +160,28 @@ const convertToInvoice = async (req, res, next) => {
       return success(res, { invoiceId: quotation.convertedToInvoice }, 'Quotation already converted to invoice')
     }
 
+    // Auto-create Event if quotation has no linked event
+    let eventId = quotation.eventId
+    if (!eventId) {
+      const Event = require('../models/Event')
+      const newEvent = await Event.create({
+        clientId: quotation.clientId,
+        eventName: quotation.eventName || 'Confirmed Wedding Shoot',
+        eventType: quotation.eventType || 'Wedding',
+        eventDate: quotation.eventDate || quotation.date || new Date(),
+        venue: quotation.venue || 'Main Banquet Hall',
+        package: quotation.services && quotation.services.length > 0 ? quotation.services[0].name : 'Custom Package',
+        packageAmount: quotation.grandTotal,
+        advanceAmount: 0,
+        totalPaid: 0,
+        remainingAmount: quotation.grandTotal,
+        status: 'Confirmed',
+        createdBy: req.user._id,
+      })
+      eventId = newEvent._id
+      quotation.eventId = eventId
+    }
+
     // Generate invoice number
     const year = new Date().getFullYear()
     const lastInvoice = await Invoice.findOne({ invoiceNumber: new RegExp(`^INV-${year}-`) })
@@ -177,7 +199,7 @@ const convertToInvoice = async (req, res, next) => {
       invoiceNumber,
       quotationId: quotation._id,
       clientId: quotation.clientId,
-      eventId: quotation.eventId,
+      eventId: eventId,
       services: quotation.services,
       subtotal: quotation.subtotal,
       discount: quotation.discount,
@@ -201,7 +223,7 @@ const convertToInvoice = async (req, res, next) => {
       .populate('eventId', 'eventName eventType eventDate venue')
       .lean()
 
-    return created(res, populated, 'Invoice created from quotation successfully')
+    return created(res, populated, 'Invoice and Event created from quotation successfully')
   } catch (err) {
     next(err)
   }
