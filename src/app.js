@@ -23,6 +23,8 @@ const equipmentRoutes = require('./routes/equipmentRoutes')
 const notificationRoutes = require('./routes/notificationRoutes')
 const dashboardRoutes = require('./routes/dashboardRoutes')
 const settingsRoutes = require('./routes/settingsRoutes')
+const quotationRoutes = require('./routes/quotationRoutes')
+const invoiceRoutes = require('./routes/invoiceRoutes')
 
 const app = express()
 
@@ -81,6 +83,8 @@ app.use('/api/equipment', equipmentRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/quotations', quotationRoutes)
+app.use('/api/invoices', invoiceRoutes)
 
 // ──────────────── Error Handling ────────────────
 app.use(notFoundHandler)
