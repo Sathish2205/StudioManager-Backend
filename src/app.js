@@ -25,6 +25,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes')
 const settingsRoutes = require('./routes/settingsRoutes')
 const quotationRoutes = require('./routes/quotationRoutes')
 const invoiceRoutes = require('./routes/invoiceRoutes')
+const shiftRoutes = require('./routes/shiftRoutes')
+const attendanceRoutes = require('./routes/attendanceRoutes')
+const leaveRoutes = require('./routes/leaveRoutes')
+const payrollRoutes = require('./routes/payrollRoutes')
 
 const app = express()
 
@@ -85,6 +89,10 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/quotations', quotationRoutes)
 app.use('/api/invoices', invoiceRoutes)
+app.use('/api/shifts', shiftRoutes)
+app.use('/api/attendance', attendanceRoutes)
+app.use('/api/leaves', leaveRoutes)
+app.use('/api/payroll', payrollRoutes)
 
 // ──────────────── Error Handling ────────────────
 app.use(notFoundHandler)

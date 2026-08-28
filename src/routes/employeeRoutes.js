@@ -2,13 +2,22 @@
 
 const express = require('express')
 const router = express.Router()
-const { createEmployee, getEmployees, getEmployeeById, updateEmployee, deleteEmployee, getEmployeesDropdown } = require('../controllers/employeeController')
+const {
+  createEmployee,
+  getEmployees,
+  getEmployeeById,
+  updateEmployee,
+  deleteEmployee,
+  getEmployeesDropdown,
+  getEmployeeDashboardStats,
+} = require('../controllers/employeeController')
 const { protect } = require('../middleware/authMiddleware')
 const { requireRole } = require('../middleware/roleMiddleware')
 
 router.use(protect)
 
 router.get('/dropdown', getEmployeesDropdown)
+router.get('/dashboard/stats', getEmployeeDashboardStats)
 
 router.route('/')
   .get(getEmployees)
