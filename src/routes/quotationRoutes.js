@@ -2,22 +2,20 @@
 
 const express = require('express')
 const router = express.Router()
-const { protect } = require('../middleware/authMiddleware')
-const {
-  createQuotation,
-  getQuotations,
-  getQuotationById,
-  updateQuotation,
-  updateQuotationStatus,
-  convertToInvoice,
-  deleteQuotation,
-} = require('../controllers/quotationController')
+const { createQuotation, getQuotations, getQuotationById, updateQuotation, deleteQuotation } = require('../controllers/quotationController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
-router.route('/').get(getQuotations).post(createQuotation)
-router.route('/:id').get(getQuotationById).put(updateQuotation).delete(deleteQuotation)
-router.put('/:id/status', updateQuotationStatus)
-router.post('/:id/convert', convertToInvoice)
+router.route('/')
+  .get(getQuotations)
+  .post(createQuotation)
+
+router.route('/:id')
+  .get(getQuotationById)
+  .put(updateQuotation)
+  .delete(authorize('owner', 'admin'), deleteQuotation)
 
 module.exports = router

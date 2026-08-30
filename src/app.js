@@ -29,6 +29,9 @@ const shiftRoutes = require('./routes/shiftRoutes')
 const attendanceRoutes = require('./routes/attendanceRoutes')
 const leaveRoutes = require('./routes/leaveRoutes')
 const payrollRoutes = require('./routes/payrollRoutes')
+const packageRoutes = require('./routes/packageRoutes')
+
+const tenantRoutes = require('./routes/tenantRoutes')
 
 const app = express()
 
@@ -74,6 +77,7 @@ app.get('/api/health', (req, res) => {
 
 // ──────────────── API Routes ────────────────
 app.use('/api/auth', authRoutes)
+app.use('/api/tenants', tenantRoutes)
 app.use('/api/clients', clientRoutes)
 app.use('/api/events', eventRoutes)
 app.use('/api/calendar', calendarRoutes)
@@ -93,6 +97,7 @@ app.use('/api/shifts', shiftRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/leaves', leaveRoutes)
 app.use('/api/payroll', payrollRoutes)
+app.use('/api/packages', packageRoutes)
 
 // ──────────────── Error Handling ────────────────
 app.use(notFoundHandler)

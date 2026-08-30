@@ -2,11 +2,11 @@
 
 const express = require('express')
 const router = express.Router()
-const { getDashboard } = require('../controllers/dashboardController')
-const { protect } = require('../middleware/authMiddleware')
+const { getDashboardStats } = require('../controllers/dashboardController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
 
-router.use(protect)
-
-router.get('/', getDashboard)
+router.use(authenticate, tenant)
+router.get('/', getDashboardStats)
 
 module.exports = router

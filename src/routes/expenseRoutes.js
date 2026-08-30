@@ -2,21 +2,17 @@
 
 const express = require('express')
 const router = express.Router()
-const { createExpense, getExpenses, getExpenseById, updateExpense, deleteExpense } = require('../controllers/expenseController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
-const { validate } = require('../middleware/validationMiddleware')
-const { createExpenseRules, updateExpenseRules } = require('../validators/expenseValidator')
+const { createExpense, getExpenses, deleteExpense } = require('../controllers/expenseController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getExpenses)
-  .post(createExpenseRules, validate, createExpense)
+  .post(createExpense)
 
-router.route('/:id')
-  .get(getExpenseById)
-  .put(updateExpenseRules, validate, updateExpense)
-  .delete(requireRole('admin', 'manager'), deleteExpense)
+router.delete('/:id', authorize('owner', 'admin'), deleteExpense)
 
 module.exports = router

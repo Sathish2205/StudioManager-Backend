@@ -1,46 +1,33 @@
 'use strict'
 
-const Task = require('../models/Task')
 const { success, created, notFound } = require('../utils/apiResponse')
-const { parsePagination, buildFilter, buildPaginationMeta } = require('../utils/pagination')
+const { parsePagination, buildPaginationMeta } = require('../utils/pagination')
 
-// POST /api/tasks
 const createTask = async (req, res, next) => {
   try {
-    const createdBy = req.user ? req.user._id : undefined
-    const task = await Task.create({ ...req.body, ...(createdBy ? { createdBy } : {}) })
-
-    const populated = await Task.findById(task._id)
-      .populate('assignedTo', 'name role avatar')
-      .populate('eventId', 'eventName eventDate')
-      .lean()
-
-    return created(res, populated, 'Task created successfully')
+    const { Task } = req.tenant.models
+    const task = await Task.create({
+      ...req.body,
+      tenantId: req.user.tenantId,
+    })
+    return created(res, task, 'Task created successfully')
   } catch (err) {
     next(err)
   }
 }
 
-// GET /api/tasks
 const getTasks = async (req, res, next) => {
   try {
+    const { Task } = req.tenant.models
     const { page, limit, skip, sort } = parsePagination(req.query)
-    const filter = buildFilter(req.query, ['title', 'description'])
+    const filter = { tenantId: req.user.tenantId }
 
-    if (req.query.priority) filter.priority = req.query.priority
+    if (req.query.status) filter.status = req.query.status
     if (req.query.assignedTo) filter.assignedTo = req.query.assignedTo
-    if (req.query.eventId) filter.eventId = req.query.eventId
-    if (req.query.dueDate) {
-      const due = new Date(req.query.dueDate)
-      filter.dueDate = { $lte: due }
-    }
 
     const [tasks, total] = await Promise.all([
       Task.find(filter)
-        .populate('assignedTo', 'name role avatar')
-        .populate('eventId', 'eventName eventDate')
-        .populate('createdBy', 'name')
-        .sort(sort)
+        .sort(sort || { dueDate: 1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -53,46 +40,26 @@ const getTasks = async (req, res, next) => {
   }
 }
 
-// GET /api/tasks/:id
-const getTaskById = async (req, res, next) => {
-  try {
-    const task = await Task.findById(req.params.id)
-      .populate('assignedTo', 'name role avatar phone email')
-      .populate('eventId', 'eventName eventDate venue status')
-      .populate('createdBy', 'name email')
-      .lean()
-
-    if (!task) return notFound(res, 'Task not found')
-    return success(res, task, 'Task fetched successfully')
-  } catch (err) {
-    next(err)
-  }
-}
-
-// PUT /api/tasks/:id
 const updateTask = async (req, res, next) => {
   try {
-    const task = await Task.findById(req.params.id)
+    const { Task } = req.tenant.models
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, tenantId: req.user.tenantId },
+      req.body,
+      { new: true, runValidators: true }
+    ).lean()
+
     if (!task) return notFound(res, 'Task not found')
-
-    Object.assign(task, req.body)
-    await task.save() // triggers pre-save hook for completedAt
-
-    const updated = await Task.findById(task._id)
-      .populate('assignedTo', 'name role avatar')
-      .populate('eventId', 'eventName eventDate')
-      .lean()
-
-    return success(res, updated, 'Task updated successfully')
+    return success(res, task, 'Task updated successfully')
   } catch (err) {
     next(err)
   }
 }
 
-// DELETE /api/tasks/:id
 const deleteTask = async (req, res, next) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id)
+    const { Task } = req.tenant.models
+    const task = await Task.findOneAndDelete({ _id: req.params.id, tenantId: req.user.tenantId })
     if (!task) return notFound(res, 'Task not found')
     return success(res, null, 'Task deleted successfully')
   } catch (err) {
@@ -100,4 +67,4 @@ const deleteTask = async (req, res, next) => {
   }
 }
 
-module.exports = { createTask, getTasks, getTaskById, updateTask, deleteTask }
+module.exports = { createTask, getTasks, updateTask, deleteTask }

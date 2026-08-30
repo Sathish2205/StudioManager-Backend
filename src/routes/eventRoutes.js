@@ -3,20 +3,19 @@
 const express = require('express')
 const router = express.Router()
 const { createEvent, getEvents, getEventById, updateEvent, deleteEvent } = require('../controllers/eventController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
-const { validate } = require('../middleware/validationMiddleware')
-const { createEventRules, updateEventRules } = require('../validators/eventValidator')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getEvents)
-  .post(createEventRules, validate, createEvent)
+  .post(createEvent)
 
 router.route('/:id')
   .get(getEventById)
-  .put(updateEventRules, validate, updateEvent)
-  .delete(requireRole('admin', 'manager'), deleteEvent)
+  .put(updateEvent)
+  .delete(authorize('owner', 'admin', 'manager'), deleteEvent)
 
 module.exports = router

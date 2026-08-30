@@ -3,21 +3,20 @@
 const express = require('express')
 const router = express.Router()
 const { createClient, getClients, getClientById, updateClient, deleteClient, getClientsDropdown } = require('../controllers/clientController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
-const { validate } = require('../middleware/validationMiddleware')
-const { createClientRules, updateClientRules } = require('../validators/clientValidator')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.get('/dropdown', getClientsDropdown)
 router.route('/')
   .get(getClients)
-  .post(createClientRules, validate, createClient)
+  .post(createClient)
 
 router.route('/:id')
   .get(getClientById)
-  .put(updateClientRules, validate, updateClient)
-  .delete(requireRole('admin', 'manager'), deleteClient)
+  .put(updateClient)
+  .delete(authorize('owner', 'admin', 'manager'), deleteClient)
 
 module.exports = router

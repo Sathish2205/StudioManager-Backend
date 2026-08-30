@@ -2,28 +2,18 @@
 
 const express = require('express')
 const router = express.Router()
-const {
-  applyLeave,
-  getLeaves,
-  getLeaveById,
-  approveLeave,
-  rejectLeave,
-  deleteLeave,
-} = require('../controllers/leaveController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { applyLeave, getLeaves, approveLeave, rejectLeave } = require('../controllers/leaveController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getLeaves)
   .post(applyLeave)
 
-router.route('/:id')
-  .get(getLeaveById)
-  .delete(requireRole('admin', 'manager'), deleteLeave)
-
-router.put('/:id/approve', requireRole('admin', 'manager'), approveLeave)
-router.put('/:id/reject', requireRole('admin', 'manager'), rejectLeave)
+router.put('/:id/approve', authorize('owner', 'admin', 'manager'), approveLeave)
+router.put('/:id/reject', authorize('owner', 'admin', 'manager'), rejectLeave)
 
 module.exports = router

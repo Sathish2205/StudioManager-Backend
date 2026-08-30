@@ -2,13 +2,11 @@
 
 const express = require('express')
 const router = express.Router()
-const { getCalendarEvents, getCalendarEventDetail, checkConflicts } = require('../controllers/calendarController')
-const { protect } = require('../middleware/authMiddleware')
+const { getCalendarEvents } = require('../controllers/calendarController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
 
-router.use(protect)
-
-router.get('/events', getCalendarEvents)
-router.get('/events/:id', getCalendarEventDetail)
-router.get('/check-conflicts', checkConflicts)
+router.use(authenticate, tenant)
+router.get('/', getCalendarEvents)
 
 module.exports = router

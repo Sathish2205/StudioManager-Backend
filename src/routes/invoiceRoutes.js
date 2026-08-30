@@ -2,20 +2,20 @@
 
 const express = require('express')
 const router = express.Router()
-const { protect } = require('../middleware/authMiddleware')
-const {
-  createInvoice,
-  getInvoices,
-  getInvoiceById,
-  updateInvoice,
-  updateInvoiceStatus,
-  deleteInvoice,
-} = require('../controllers/invoiceController')
+const { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice } = require('../controllers/invoiceController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
-router.route('/').get(getInvoices).post(createInvoice)
-router.route('/:id').get(getInvoiceById).put(updateInvoice).delete(deleteInvoice)
-router.put('/:id/status', updateInvoiceStatus)
+router.route('/')
+  .get(getInvoices)
+  .post(createInvoice)
+
+router.route('/:id')
+  .get(getInvoiceById)
+  .put(updateInvoice)
+  .delete(authorize('owner', 'admin'), deleteInvoice)
 
 module.exports = router

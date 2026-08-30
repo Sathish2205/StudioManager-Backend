@@ -2,21 +2,17 @@
 
 const express = require('express')
 const router = express.Router()
-const { createPayment, getPayments, getPaymentById, updatePayment, deletePayment } = require('../controllers/paymentController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
-const { validate } = require('../middleware/validationMiddleware')
-const { createPaymentRules, updatePaymentRules } = require('../validators/paymentValidator')
+const { createPayment, getPayments, deletePayment } = require('../controllers/paymentController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getPayments)
-  .post(createPaymentRules, validate, createPayment)
+  .post(createPayment)
 
-router.route('/:id')
-  .get(getPaymentById)
-  .put(updatePaymentRules, validate, updatePayment)
-  .delete(requireRole('admin', 'manager'), deletePayment)
+router.delete('/:id', authorize('owner', 'admin'), deletePayment)
 
 module.exports = router

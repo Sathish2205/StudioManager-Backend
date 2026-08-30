@@ -1,14 +1,11 @@
 'use strict'
 
-const Invoice = require('../models/Invoice')
-const Payment = require('../models/Payment')
 const { success, created, notFound } = require('../utils/apiResponse')
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination')
 
-// Generate next invoice number
-const generateInvoiceNumber = async () => {
+const generateInvoiceNumber = async (Invoice, tenantId) => {
   const year = new Date().getFullYear()
-  const lastInvoice = await Invoice.findOne({ invoiceNumber: new RegExp(`^INV-${year}-`) })
+  const lastInvoice = await Invoice.findOne({ tenantId, invoiceNumber: new RegExp(`^INV-${year}-`) })
     .sort({ invoiceNumber: -1 })
     .lean()
 
@@ -20,58 +17,31 @@ const generateInvoiceNumber = async () => {
   return `INV-${year}-${String(nextNum).padStart(3, '0')}`
 }
 
-// Recalculate invoice balance from payments
-const recalculateInvoiceBalance = async (invoiceId) => {
-  const payments = await Payment.find({ invoiceId }).lean()
-  const totalPaid = payments.reduce((sum, p) => sum + (p.paymentType !== 'Refund' ? p.amount : -p.amount), 0)
-
-  const invoice = await Invoice.findById(invoiceId)
-  if (!invoice) return
-
-  invoice.totalPaid = totalPaid
-  invoice.balance = Math.max(0, invoice.grandTotal - totalPaid)
-
-  if (invoice.balance === 0 && totalPaid > 0) {
-    invoice.status = 'Paid'
-  } else if (totalPaid > 0 && invoice.balance > 0) {
-    invoice.status = 'Partially Paid'
-  }
-
-  await invoice.save()
-}
-
 // POST /api/invoices
 const createInvoice = async (req, res, next) => {
   try {
-    const invoiceNumber = await generateInvoiceNumber()
-    const { services, discount = 0, taxPercent = 18 } = req.body
+    const { Invoice } = req.tenant.models
+    const invoiceNumber = req.body.invoiceNumber || await generateInvoiceNumber(Invoice, req.user.tenantId)
+    const { items, services, discount = 0, tax = 0 } = req.body
 
-    const subtotal = services.reduce((sum, s) => sum + (s.qty * s.unitPrice), 0)
-    const taxAmount = Math.round((subtotal - discount) * taxPercent / 100)
-    const grandTotal = subtotal - discount + taxAmount
-
-    const computedServices = services.map(s => ({
-      ...s,
-      total: s.qty * s.unitPrice,
-    }))
+    const itemLst = items || services || []
+    const subtotal = itemLst.reduce((sum, s) => sum + ((s.quantity || s.qty || 1) * (s.rate || s.unitPrice || 0)), 0)
+    const grandTotal = subtotal - discount + tax
+    const balance = grandTotal - (req.body.totalPaid || 0)
 
     const invoice = await Invoice.create({
       ...req.body,
+      tenantId: req.user.tenantId,
       invoiceNumber,
-      services: computedServices,
-      subtotal,
-      taxAmount,
-      grandTotal,
-      balance: grandTotal,
-      createdBy: req.user._id,
+      items: itemLst,
+      subtotal: req.body.subtotal || subtotal,
+      tax: req.body.tax || tax,
+      grandTotal: req.body.grandTotal || grandTotal,
+      balance: req.body.balance !== undefined ? req.body.balance : balance,
+      createdBy: req.user.userId,
     })
 
-    const populated = await Invoice.findById(invoice._id)
-      .populate('clientId', 'firstName lastName phone email')
-      .populate('eventId', 'eventName eventType eventDate venue')
-      .lean()
-
-    return created(res, populated, 'Invoice created successfully')
+    return created(res, invoice, 'Invoice created successfully')
   } catch (err) {
     next(err)
   }
@@ -80,18 +50,15 @@ const createInvoice = async (req, res, next) => {
 // GET /api/invoices
 const getInvoices = async (req, res, next) => {
   try {
+    const { Invoice } = req.tenant.models
     const { page, limit, skip, sort } = parsePagination(req.query)
-    const filter = {}
+    const filter = { tenantId: req.user.tenantId }
 
     if (req.query.status) filter.status = req.query.status
     if (req.query.clientId) filter.clientId = req.query.clientId
-    if (req.query.eventId) filter.eventId = req.query.eventId
 
     const [invoices, total] = await Promise.all([
       Invoice.find(filter)
-        .populate('clientId', 'firstName lastName phone email')
-        .populate('eventId', 'eventName eventType eventDate venue')
-        .populate('quotationId', 'quotationNumber')
         .sort(sort || { createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -108,18 +75,13 @@ const getInvoices = async (req, res, next) => {
 // GET /api/invoices/:id
 const getInvoiceById = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findById(req.params.id)
-      .populate('clientId', 'firstName lastName phone email address')
-      .populate('eventId', 'eventName eventType eventDate endDate venue startTime endTime package packageAmount')
-      .populate('quotationId', 'quotationNumber status')
-      .lean()
+    const { Invoice, Payment } = req.tenant.models
+    const invoice = await Invoice.findOne({ _id: req.params.id, tenantId: req.user.tenantId }).lean()
 
     if (!invoice) return notFound(res, 'Invoice not found')
 
-    // Fetch related payments
-    const payments = await Payment.find({ eventId: invoice.eventId._id || invoice.eventId })
+    const payments = await Payment.find({ invoiceId: invoice._id, tenantId: req.user.tenantId })
       .sort({ paymentDate: -1 })
-      .populate('receivedBy', 'name')
       .lean()
 
     return success(res, { ...invoice, payments }, 'Invoice fetched successfully')
@@ -131,49 +93,15 @@ const getInvoiceById = async (req, res, next) => {
 // PUT /api/invoices/:id
 const updateInvoice = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findById(req.params.id)
+    const { Invoice } = req.tenant.models
+    const invoice = await Invoice.findOneAndUpdate(
+      { _id: req.params.id, tenantId: req.user.tenantId },
+      req.body,
+      { new: true, runValidators: true }
+    ).lean()
+
     if (!invoice) return notFound(res, 'Invoice not found')
-
-    const { services, discount, taxPercent } = req.body
-
-    if (services) {
-      const subtotal = services.reduce((sum, s) => sum + (s.qty * s.unitPrice), 0)
-      const disc = discount !== undefined ? discount : invoice.discount
-      const tp = taxPercent !== undefined ? taxPercent : invoice.taxPercent
-      const taxAmount = Math.round((subtotal - disc) * tp / 100)
-      const grandTotal = subtotal - disc + taxAmount
-
-      req.body.services = services.map(s => ({ ...s, total: s.qty * s.unitPrice }))
-      req.body.subtotal = subtotal
-      req.body.taxAmount = taxAmount
-      req.body.grandTotal = grandTotal
-      req.body.balance = grandTotal - invoice.totalPaid
-    }
-
-    Object.assign(invoice, req.body)
-    await invoice.save()
-
-    const updated = await Invoice.findById(req.params.id)
-      .populate('clientId', 'firstName lastName phone email')
-      .populate('eventId', 'eventName eventType eventDate venue')
-      .lean()
-
-    return success(res, updated, 'Invoice updated successfully')
-  } catch (err) {
-    next(err)
-  }
-}
-
-// PUT /api/invoices/:id/status
-const updateInvoiceStatus = async (req, res, next) => {
-  try {
-    const invoice = await Invoice.findById(req.params.id)
-    if (!invoice) return notFound(res, 'Invoice not found')
-
-    invoice.status = req.body.status
-    await invoice.save()
-
-    return success(res, invoice, `Invoice status updated to ${req.body.status}`)
+    return success(res, invoice, 'Invoice updated successfully')
   } catch (err) {
     next(err)
   }
@@ -182,7 +110,8 @@ const updateInvoiceStatus = async (req, res, next) => {
 // DELETE /api/invoices/:id
 const deleteInvoice = async (req, res, next) => {
   try {
-    const invoice = await Invoice.findByIdAndDelete(req.params.id)
+    const { Invoice } = req.tenant.models
+    const invoice = await Invoice.findOneAndDelete({ _id: req.params.id, tenantId: req.user.tenantId })
     if (!invoice) return notFound(res, 'Invoice not found')
     return success(res, null, 'Invoice deleted successfully')
   } catch (err) {
@@ -190,12 +119,4 @@ const deleteInvoice = async (req, res, next) => {
   }
 }
 
-module.exports = {
-  createInvoice,
-  getInvoices,
-  getInvoiceById,
-  updateInvoice,
-  updateInvoiceStatus,
-  deleteInvoice,
-  recalculateInvoiceBalance,
-}
+module.exports = { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice }

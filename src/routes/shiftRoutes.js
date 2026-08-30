@@ -2,21 +2,19 @@
 
 const express = require('express')
 const router = express.Router()
-const { createShift, getShifts, getActiveShifts, getShiftById, updateShift, deleteShift } = require('../controllers/shiftController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { createShift, getShifts, updateShift, deleteShift } = require('../controllers/shiftController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
-
-router.get('/active', getActiveShifts)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getShifts)
-  .post(requireRole('admin', 'manager'), createShift)
+  .post(authorize('owner', 'admin', 'manager'), createShift)
 
 router.route('/:id')
-  .get(getShiftById)
-  .put(requireRole('admin', 'manager'), updateShift)
-  .delete(requireRole('admin', 'manager'), deleteShift)
+  .put(authorize('owner', 'admin', 'manager'), updateShift)
+  .delete(authorize('owner', 'admin'), deleteShift)
 
 module.exports = router

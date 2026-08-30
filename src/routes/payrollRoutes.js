@@ -2,23 +2,17 @@
 
 const express = require('express')
 const router = express.Router()
-const {
-  generatePayroll,
-  getPayrolls,
-  getPayrollById,
-  updatePayrollStatus,
-} = require('../controllers/payrollController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { generatePayroll, getPayrolls, updatePayrollStatus } = require('../controllers/payrollController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.route('/')
   .get(getPayrolls)
-  .post(requireRole('admin', 'manager', 'accountant'), generatePayroll)
+  .post(authorize('owner', 'admin', 'manager'), generatePayroll)
 
-router.route('/:id')
-  .get(getPayrollById)
-  .put(requireRole('admin', 'manager', 'accountant'), updatePayrollStatus)
+router.put('/:id/status', authorize('owner', 'admin', 'manager'), updatePayrollStatus)
 
 module.exports = router

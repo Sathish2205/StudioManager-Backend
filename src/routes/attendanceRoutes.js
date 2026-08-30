@@ -2,29 +2,17 @@
 
 const express = require('express')
 const router = express.Router()
-const {
-  checkIn, checkOut, startBreak, endBreak,
-  getTodayAttendance, getEmployeeAttendance, getMonthlyAttendance,
-  adjustAttendance, getEmployeeCurrentStatus,
-} = require('../controllers/attendanceController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { getTodayAttendance, getAttendanceLog, checkIn, checkOut, adjustAttendance } = require('../controllers/attendanceController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
-// Employee actions
-router.post('/check-in', checkIn)
-router.post('/check-out', checkOut)
-router.post('/break/start', startBreak)
-router.post('/break/end', endBreak)
-
-// Summary & listing
 router.get('/today', getTodayAttendance)
-router.get('/employee/:id', getEmployeeAttendance)
-router.get('/employee/:id/status', getEmployeeCurrentStatus)
-router.get('/employee/:id/monthly/:year/:month', getMonthlyAttendance)
-
-// Manual adjustment (admin/manager only)
-router.put('/:id/adjust', requireRole('admin', 'manager'), adjustAttendance)
+router.get('/log', getAttendanceLog)
+router.post('/checkin', checkIn)
+router.post('/checkout', checkOut)
+router.put('/adjust/:id', authorize('owner', 'admin', 'manager'), adjustAttendance)
 
 module.exports = router

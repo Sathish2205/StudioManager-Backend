@@ -2,12 +2,11 @@
 
 const express = require('express')
 const router = express.Router()
-const { getFinanceOverview, getFinancePayments } = require('../controllers/financeController')
-const { protect } = require('../middleware/authMiddleware')
+const { getFinanceOverview } = require('../controllers/financeController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
 
-router.use(protect)
-
-router.get('/', getFinanceOverview)
-router.get('/payments', getFinancePayments)
+router.use(authenticate, tenant)
+router.get('/overview', getFinanceOverview)
 
 module.exports = router

@@ -2,14 +2,14 @@
 
 const express = require('express')
 const router = express.Router()
-const { getSettings, updateSettings, getPackages } = require('../controllers/settingsController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { getSettings, updateSettings } = require('../controllers/settingsController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.get('/', getSettings)
-router.put('/', requireRole('admin', 'manager'), updateSettings)
-router.get('/packages', getPackages)
+router.put('/', authorize('owner', 'admin'), updateSettings)
 
 module.exports = router

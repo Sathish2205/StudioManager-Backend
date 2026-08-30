@@ -2,16 +2,12 @@
 
 const express = require('express')
 const router = express.Router()
-const { register, login, getMe, updateProfile, changePassword, logout } = require('../controllers/authController')
-const { protect } = require('../middleware/authMiddleware')
-const { validate } = require('../middleware/validationMiddleware')
-const { registerRules, loginRules, updateProfileRules, changePasswordRules } = require('../validators/authValidator')
+const { login, getMe, logout } = require('../controllers/authController')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
 
-router.post('/register', registerRules, validate, register)
-router.post('/login', loginRules, validate, login)
-router.get('/me', protect, getMe)
-router.put('/profile', protect, updateProfileRules, validate, updateProfile)
-router.put('/change-password', protect, changePasswordRules, validate, changePassword)
-router.post('/logout', protect, logout)
+router.post('/login', login)
+router.post('/logout', logout)
+router.get('/me', authenticate, tenant, getMe)
 
 module.exports = router

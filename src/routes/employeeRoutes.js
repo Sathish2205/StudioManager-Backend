@@ -11,21 +11,22 @@ const {
   getEmployeesDropdown,
   getEmployeeDashboardStats,
 } = require('../controllers/employeeController')
-const { protect } = require('../middleware/authMiddleware')
-const { requireRole } = require('../middleware/roleMiddleware')
+const { authenticate } = require('../middleware/authenticate')
+const { tenant } = require('../middleware/tenant')
+const { authorize } = require('../middleware/authorize')
 
-router.use(protect)
+router.use(authenticate, tenant)
 
 router.get('/dropdown', getEmployeesDropdown)
 router.get('/dashboard/stats', getEmployeeDashboardStats)
 
 router.route('/')
   .get(getEmployees)
-  .post(requireRole('admin', 'manager'), createEmployee)
+  .post(authorize('owner', 'admin', 'manager'), createEmployee)
 
 router.route('/:id')
   .get(getEmployeeById)
-  .put(requireRole('admin', 'manager'), updateEmployee)
-  .delete(requireRole('admin', 'manager'), deleteEmployee)
+  .put(authorize('owner', 'admin', 'manager'), updateEmployee)
+  .delete(authorize('owner', 'admin'), deleteEmployee)
 
 module.exports = router
